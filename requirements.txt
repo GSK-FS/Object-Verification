@@ -1,0 +1,13 @@
+# flask
+# pillow
+ultralytics
+
+# Libraries for building APIs
+fastapi
+uvicorn
+python-multipart
+
+#tools for image processing
+# ultralytics
+# opencv-python
+# numpy
