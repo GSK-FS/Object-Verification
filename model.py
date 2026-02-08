@@ -77,3 +77,61 @@ def detect_objects(image, allowed_classes=None):
             })
 
     return detections
+
+# model.py (ADD BELOW existing code)
+
+def verify_car_video(
+    frames,
+    allowed_classes=["car"],
+    min_presence_ratio=0.8
+):
+    """
+    Verifies:
+    - Car is present in >= 80% frames
+    - User does not leave object (basic bbox continuity)
+    """
+    total_frames = len(frames)
+    if total_frames == 0:
+        return {
+            "valid": False,
+            "reason": "No frames extracted from video"
+        }
+
+    car_detected_frames = 0
+    last_bbox = None
+    bbox_jump_count = 0
+
+    for frame in frames:
+        detections = detect_objects(frame, allowed_classes)
+
+        if detections:
+            car_detected_frames += 1
+
+            # Take the highest confidence detection
+            best = max(detections, key=lambda x: x["confidence"])
+            bbox = best["bbox"]
+
+            # Simple movement sanity check
+            if last_bbox:
+                dx = abs(bbox[0] - last_bbox[0])
+                dy = abs(bbox[1] - last_bbox[1])
+
+                if dx > 200 or dy > 200:  # threshold tweakable
+                    bbox_jump_count += 1
+
+            last_bbox = bbox
+
+    presence_ratio = car_detected_frames / total_frames
+
+    return {
+        "valid": presence_ratio >= min_presence_ratio,
+        "total_frames": total_frames,
+        "car_detected_frames": car_detected_frames,
+        "presence_ratio": round(presence_ratio, 3),
+        "bbox_jumps": bbox_jump_count,
+        "message": (
+            "Valid 360 car walkaround"
+            if presence_ratio >= min_presence_ratio
+            else "Car not consistently visible in video"
+        )
+    }

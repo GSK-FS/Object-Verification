@@ -7,6 +7,12 @@ import datetime
 from model import detect_objects, get_model
 from utils import decode_base64_image, read_uploaded_file
 
+# main.py (video imports)
+from utils import save_uploaded_video, extract_frames
+from model import verify_car_video
+import os
+
+
 db = {}
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -77,3 +83,25 @@ async def detect(
         "message": f"Valid image."
     }
 
+
+@app.post("/api/detect-video")
+async def detect_video(
+    file: UploadFile = File(...),
+    frame_skip: Optional[int] = Form(5)):
+    if not file:
+        return {"error": "No video file provided"}
+
+    video_path = save_uploaded_video(file)
+
+    try:
+        frames = extract_frames(video_path, frame_skip=frame_skip)
+        result = verify_car_video(frames)
+
+        return {
+            "success": True,
+            "video_validation": result
+        }
+
+    finally:
+        if os.path.exists(video_path):
+            os.remove(video_path)
